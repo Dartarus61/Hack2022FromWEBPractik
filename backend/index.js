@@ -1,5 +1,5 @@
 import express from "express";
-import Sequelize, { DataTypes, Model, where } from "sequelize";
+import Sequelize, { DataTypes, Model } from "sequelize";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
@@ -16,8 +16,11 @@ const sequelize = new Sequelize("pasdat", "postgres", "postgres", {
   dialect: "postgres",
   freezeTableName: true,
 });
-class serv extends Model {}
-class dir extends Model {}
+class User extends Model {}
+class Role extends Model {}
+class Secret extends Model {}
+class Folder extends Model {}
+class Permission extends Model {}
 try {
   await sequelize.authenticate();
   console.log("Соединение с БД было успешно установлено");
@@ -25,36 +28,94 @@ try {
   console.log("Невозможно выполнить подключение к БД: ", e);
 }
 
-serv.init(
+User.init(
   {
-    pass: { type: DataTypes.STRING, allowNull: false },
+    id: { type: DataTypes.INTEGER, allowNull: false, primaryKey: true },
     login: { type: DataTypes.STRING, allowNull: false },
-    url: { type: DataTypes.STRING, allowNull: false },
-    role: { type: DataTypes.STRING, allowNull: false, default: "user" },
+    password: { type: DataTypes.STRING, allowNull: false },
+  },
+  {
+    sequelize, // Экземпляр подключения (обязательно)
+    modelName: "User",
+    timestamps: false,
+  }
+);
+Role.init(
+  {
+    id: { type: DataTypes.INTEGER, allowNull: false, primaryKey: true },
     name: { type: DataTypes.STRING, allowNull: false },
-    surname: { type: DataTypes.STRING, allowNull: false },
   },
   {
-    sequelize,
+    sequelize, // Экземпляр подключения (обязательно)
+    modelName: "Role",
     timestamps: false,
-    freezeTableName: true,
   }
 );
-dir.init(
+Permission.init(
   {
-    id: { type: DataTypes.INTEGER, allowNull: false },
-    url: { type: DataTypes.STRING, allowNull: false },
+    id: { type: DataTypes.INTEGER, allowNull: false, primaryKey: true },
+    roleid: { type: DataTypes.INTEGER, allowNull: false },
+    type: { type: DataTypes.INTEGER, allowNull: false },
   },
   {
-    sequelize,
+    sequelize, // Экземпляр подключения (обязательно)
+    modelName: "Permission",
     timestamps: false,
-    freezeTableName: true,
   }
 );
+Folder.init(
+  {
+    id: { type: DataTypes.INTEGER, allowNull: false, primaryKey: true },
+    name: { type: DataTypes.STRING, allowNull: false },
+    parent: { type: DataTypes.INTEGER, allowNull: true },
+  },
+  {
+    sequelize, // Экземпляр подключения (обязательно)
+    modelName: "Folder",
+    timestamps: false,
+  }
+);
+Secret.init(
+  {
+    id: { type: DataTypes.INTEGER, allowNull: false, primaryKey: true },
+    folder_id: { type: DataTypes.INTEGER, allowNull: false },
+    type: { type: DataTypes.INTEGER, allowNull: false }, // ssh - 1, pas - 0
+    content: { type: DataTypes.STRING, allowNull: false },
+    name: { type: DataTypes.STRING, allowNull: false },
+  },
+  {
+    sequelize, // Экземпляр подключения (обязательно)
+    modelName: "Secret",
+    timestamps: false,
+  }
+);
+await sequelize.sync({ alter: true });
 
-export { serv };
-//const all = await serv.findOne({ where: { login: "megalogin" } });
-//console.log(all.dataValues.pass);
+const Folder_User_Role = sequelize.define("Folder_User_Role", {
+  userId: { type: DataTypes.INTEGER },
+  folderId: { type: DataTypes.INTEGER },
+  roleid: { type: DataTypes.INTEGER },
+});
+User.hasMany(Folder_User_Role);
+Folder_User_Role.belongsTo(User, {
+  foreignKey: "userId",
+});
+Role.hasMany(Folder_User_Role);
+Folder_User_Role.belongsTo(Role, {
+  foreignKey: "roleid",
+});
+Folder.hasMany(Folder_User_Role);
+Folder_User_Role.belongsTo(Folder, {
+  foreignKey: "folderId",
+});
+Role.hasMany(Permission);
+Permission.belongsTo(Role, {
+  foreignKey: "roleid",
+});
+Folder.hasMany(Secret);
+Secret.belongsTo(Folder, {
+  foreignKey: "folder_id",
+});
 
 app.get("/api", (req, res) => {
   res.send("ok");
@@ -62,7 +123,7 @@ app.get("/api", (req, res) => {
 app.get("/register", (req, res) => {
   res.send("ok");
 });
-app.get("/login", (req, res) => {
+app.get("/api", (req, res) => {
   res.send("ok");
 });
 
@@ -91,7 +152,7 @@ let encrypt = (data) => {
 };
 data = encrypt(data);
 
-function add_user(data) {
+async function add_user(data) {
   const user = await serv.create(
     {
       login: data.login,
