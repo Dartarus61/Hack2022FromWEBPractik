@@ -1,0 +1,38 @@
+.container{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    height: 90vh;
+    
+}
+
+.containerText{
+    color: black;
+    font-family: 'Titillium Web', sans-serif;
+    font-size: 50px;
+    padding: 0em;
+    margin: 0em;
+    margin-bottom: 15px;
+    font-weight: large;
+}
+
+.register{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    height: 60vh;
+    width: 40vw;
+    border: 1px solid black;
+    border-radius: 20px;
+}
+
+.input{
+    width: 80%;
+    margin-bottom: 6px;
+}
+
+button{
+    margin-bottom: 7px;
+}
